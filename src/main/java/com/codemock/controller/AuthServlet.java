@@ -28,8 +28,7 @@ public class AuthServlet extends HttpServlet {
         if ("register".equals(action)) {
             handleRegistration(request, response);
         } else if ("login".equals(action)) {
-            // Login logic hum agle step mein likhenge
-            System.out.println("Login block called");
+            handleLogin(request, response); // Naya method call
         }
     }
 
@@ -80,6 +79,27 @@ public class AuthServlet extends HttpServlet {
             }
         } else {
             response.getWriter().print("Registration failed. Email might already exist.");
+        }
+    }
+    private void handleLogin(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        
+        String email = request.getParameter("email");
+        String password = request.getParameter("password");
+
+        UserDAO userDao = new UserDAO();
+        User loggedInUser = userDao.loginUser(email, password);
+
+        if (loggedInUser != null) {
+            // Login Successful: Create a Session to remember the user
+            HttpSession session = request.getSession();
+            session.setAttribute("activeUser", loggedInUser);
+            
+            // Redirect to Dashboard
+            response.sendRedirect("dashboard.jsp");
+        } else {
+            // Login Failed: Invalid credentials or unverified account
+            response.getWriter().print("Login failed! Please check your credentials or verify your email.");
         }
     }
 }

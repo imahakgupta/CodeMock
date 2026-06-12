@@ -93,4 +93,49 @@ public class UserDAO {
 
         return isVerified;
     }
+    
+    // Method to check login credentials
+    public User loginUser(String email, String password) {
+        User user = null;
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+        ResultSet rs = null;
+
+        // SQL: Fetch user only if Email and Password match AND Account is Verified (1)
+        String query = "SELECT * FROM Users WHERE Email = ? AND PasswordHash = ? AND IsVerified = 1";
+
+        try {
+            conn = DBConnection.getConnection();
+            if (conn != null) {
+                pstmt = conn.prepareStatement(query);
+                pstmt.setString(1, email);
+                pstmt.setString(2, password);
+
+                rs = pstmt.executeQuery();
+
+                // If a matching record is found
+                if (rs.next()) {
+                    user = new User();
+                    user.setUserId(rs.getInt("UserID"));
+                    user.setFullName(rs.getString("FullName"));
+                    user.setEmail(rs.getString("Email"));
+                    user.setPhone(rs.getString("Phone"));
+                    user.setVerified(rs.getBoolean("IsVerified"));
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error in loginUser: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            try {
+                if (rs != null) rs.close();
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return user; // Returns the user object if login is successful, else returns null
+    }
 }

@@ -41,4 +41,6 @@ public class VerifyOtpServlet extends HttpServlet {
             response.sendRedirect("index.jsp");
         }
     }
+    
+    
 }
