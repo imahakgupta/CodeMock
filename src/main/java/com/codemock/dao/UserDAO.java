@@ -1,13 +1,57 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.codemock.dao;
 
-/**
- *
- * @author gupta
- */
+import com.codemock.model.User;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+
 public class UserDAO {
-    
+
+    // Method to register/save a new user into the database
+    public boolean saveUser(User user) {
+        boolean isSuccess = false;
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        // SQL Query to insert user details
+        String query = "INSERT INTO Users (FullName, Email, Phone, PasswordHash, IsVerified, CurrentOTP, OTPExpiry) VALUES (?, ?, ?, ?, ?, ?, ?)";
+
+        try {
+            // 1. Get database connection using our DBConnection class
+            conn = DBConnection.getConnection();
+
+            if (conn != null) {
+                // 2. Prepare the statement to prevent SQL Injection
+                pstmt = conn.prepareStatement(query);
+
+                // 3. Set parameters replacing the '?' placeholders
+                pstmt.setString(1, user.getFullName());
+                pstmt.setString(2, user.getEmail());
+                pstmt.setString(3, user.getPhone());
+                pstmt.setString(4, user.getPasswordHash());
+                pstmt.setBoolean(5, user.isVerified());
+                pstmt.setString(6, user.getCurrentOtp());
+                pstmt.setTimestamp(7, user.getOtpExpiry());
+
+                // 4. Execute the query
+                int rowsInserted = pstmt.executeUpdate();
+                if (rowsInserted > 0) {
+                    isSuccess = true;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error in saveUser: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            // 5. Close resources to prevent memory leaks
+            try {
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return isSuccess;
+    }
 }
