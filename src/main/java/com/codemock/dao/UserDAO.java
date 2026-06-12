@@ -54,4 +54,43 @@ public class UserDAO {
 
         return isSuccess;
     }
+    
+    // Method to verify OTP and activate account
+    public boolean verifyAndActivateUser(String email, String enteredOtp) {
+        boolean isVerified = false;
+        Connection conn = null;
+        PreparedStatement pstmt = null;
+
+        // SQL: Update IsVerified to 1 IF Email and OTP match, AND OTP is not expired
+        String query = "UPDATE Users SET IsVerified = 1 "
+                     + "WHERE Email = ? AND CurrentOTP = ? AND OTPExpiry > GETDATE()";
+
+        try {
+            conn = DBConnection.getConnection();
+            if (conn != null) {
+                pstmt = conn.prepareStatement(query);
+                pstmt.setString(1, email);
+                pstmt.setString(2, enteredOtp);
+
+                // executeUpdate() returns the number of rows affected
+                int rowsUpdated = pstmt.executeUpdate();
+                
+                if (rowsUpdated > 0) {
+                    isVerified = true; // Match successful and account activated!
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error in verifyAndActivateUser: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            try {
+                if (pstmt != null) pstmt.close();
+                if (conn != null) conn.close();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return isVerified;
+    }
 }
