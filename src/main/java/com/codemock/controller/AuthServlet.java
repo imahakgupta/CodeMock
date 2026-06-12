@@ -1,85 +1,85 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/JSP_Servlet/Servlet.java to edit this template
- */
 package com.codemock.controller;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServlet;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import com.codemock.dao.UserDAO;
+import com.codemock.model.User;
+import com.codemock.service.EmailService;
 
-/**
- *
- * @author gupta
- */
+import java.io.IOException;
+import java.sql.Timestamp;
+import java.util.Random;
+import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
+
+// URL Mapping: Yeh batata hai ki frontend form is file ko kis naam se pukarega
+@WebServlet(name = "AuthServlet", urlPatterns = {"/AuthServlet"})
 public class AuthServlet extends HttpServlet {
 
-    /**
-     * Processes requests for both HTTP <code>GET</code> and <code>POST</code>
-     * methods.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    protected void processRequest(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        response.setContentType("text/html;charset=UTF-8");
-        try (PrintWriter out = response.getWriter()) {
-            /* TODO output your page here. You may use following sample code. */
-            out.println("<!DOCTYPE html>");
-            out.println("<html>");
-            out.println("<head>");
-            out.println("<title>Servlet AuthServlet</title>");
-            out.println("</head>");
-            out.println("<body>");
-            out.println("<h1>Servlet AuthServlet at " + request.getContextPath() + "</h1>");
-            out.println("</body>");
-            out.println("</html>");
-        }
-    }
-
-    // <editor-fold defaultstate="collapsed" desc="HttpServlet methods. Click on the + sign on the left to edit the code.">
-    /**
-     * Handles the HTTP <code>GET</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-        processRequest(request, response);
-    }
-
-    /**
-     * Handles the HTTP <code>POST</code> method.
-     *
-     * @param request servlet request
-     * @param response servlet response
-     * @throws ServletException if a servlet-specific error occurs
-     * @throws IOException if an I/O error occurs
-     */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        processRequest(request, response);
+        
+        // Form se hidden input action nikalna (login ya register)
+        String action = request.getParameter("action");
+
+        if ("register".equals(action)) {
+            handleRegistration(request, response);
+        } else if ("login".equals(action)) {
+            // Login logic hum agle step mein likhenge
+            System.out.println("Login block called");
+        }
     }
 
-    /**
-     * Returns a short description of the servlet.
-     *
-     * @return a String containing servlet description
-     */
-    @Override
-    public String getServletInfo() {
-        return "Short description";
-    }// </editor-fold>
+    private void handleRegistration(HttpServletRequest request, HttpServletResponse response) 
+            throws IOException {
+        
+        // 1. Frontend form se saara data nikalna
+        String fullName = request.getParameter("fullName");
+        String email = request.getParameter("email");
+        String phone = request.getParameter("phone");
+        String password = request.getParameter("password"); // Real project me ise encrypt karte hain
 
+        // 2. 6-Digit Random OTP Generate karna
+        Random rnd = new Random();
+        int number = rnd.nextInt(999999);
+        String otp = String.format("%06d", number);
+
+        // OTP ka expiry time (Current time + 10 minutes)
+        Timestamp expiryTime = new Timestamp(System.currentTimeMillis() + (10 * 60 * 1000));
+
+        // 3. User object me data set karna
+        User newUser = new User();
+        newUser.setFullName(fullName);
+        newUser.setEmail(email);
+        newUser.setPhone(phone);
+        newUser.setPasswordHash(password);
+        newUser.setVerified(false);
+        newUser.setCurrentOtp(otp);
+        newUser.setOtpExpiry(expiryTime);
+
+        // 4. Database mein save karna aur Email bhejna
+        UserDAO userDao = new UserDAO();
+        boolean isSaved = userDao.saveUser(newUser);
+
+        if (isSaved) {
+            EmailService emailService = new EmailService();
+            boolean isEmailSent = emailService.sendOtpEmail(email, otp);
+
+            if (isEmailSent) {
+                // Session mein email save kar lo taaki OTP page par use kar sakein
+                HttpSession session = request.getSession();
+                session.setAttribute("tempEmail", email);
+                
+                // User ko OTP page par bhej do
+                response.sendRedirect("otp-verify.jsp");
+            } else {
+                response.getWriter().print("User registered but failed to send OTP email.");
+            }
+        } else {
+            response.getWriter().print("Registration failed. Email might already exist.");
+        }
+    }
 }
